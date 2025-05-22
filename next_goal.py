@@ -1,0 +1,1 @@
+# Soccer next goal logic
