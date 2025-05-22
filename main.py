@@ -21,12 +21,9 @@ def post_to_discord(message):
     try:
         response = requests.post(DISCORD_WEBHOOK_URL, json={"content": message})
         if response.status_code != 204:
-            print("[DISCORD ERROR] Status:", response.status_code, "| Message:", response.text)
+            print("[DISCORD ERROR]", response.status_code, response.text)
     except Exception as e:
         print("[DISCORD EXCEPTION]", e)
-
-# Test webhook connectivity
-post_to_discord(">>> TESTING DISCORD WEBHOOK â€” Touarangi is alive.")
 
 def log_strike_json(strike):
     try:
@@ -57,8 +54,6 @@ def run_engine():
         if not verified:
             continue
 
-        print(">>> STRIKE VERIFIED:", verified)
-
         add_strike(verified)
         post_to_discord(
             f"**TOUARANGI STRIKE**\n"
@@ -81,27 +76,8 @@ def run_engine():
 
     log_info(">>> Cycle complete.\n")
 
-# Optional: Force a fake test strike to validate Discord + logger
-def inject_fake_strike():
-    fake = {
-        "player": "Test Player",
-        "market": "Anytime Goalscorer",
-        "odds": 3.20,
-        "confidence": 88
-    }
-    add_strike(fake)
-    post_to_discord(
-        f"**TOUARANGI STRIKE**\n"
-        f"{fake['player']} â€“ {fake['market']}\n"
-        f"Odds: {fake['odds']} | Confidence: {fake['confidence']}%"
-    )
-    log_strike_json(fake)
-    log_strike_summary(fake)
-    log_info(">>> FAKE STRIKE INJECTED")
-
-# RUN
+# RUN once, live-ready
 try:
     run_engine()
-    inject_fake_strike()  # remove this after confirming it works
 except Exception as e:
     print("[FATAL ERROR]", e)
