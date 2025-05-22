@@ -1,17 +1,20 @@
 # strike_engine.py
 
 from correct_score import evaluate_correct_score_tennis
+from set_winner import evaluate_set_winner_from_blog
+from timing import get_utc_time
 
 def generate_strikes(blog_lines, phrase_list):
     """
-    Scans blog lines for key phrases and overlays, then outputs structured strike objects.
+    Runs all strike detection logic on a list of blog lines.
+    Returns a list of valid strike objects with metadata.
     """
     strikes = []
 
     for line in blog_lines:
         text = line.lower()
 
-        # --- Phrase Match Core ---
+        # --- Phrase Match Core (General Momentum) ---
         matched_phrases = [p for p in phrase_list if p in text]
         if matched_phrases:
             strike = {
@@ -24,11 +27,20 @@ def generate_strikes(blog_lines, phrase_list):
             }
             strikes.append(strike)
 
-        # --- Correct Score Analysis (Tennis Only) ---
+        # --- Set Winner Analysis ---
+        set_result = evaluate_set_winner_from_blog(text)
+        if set_result:
+            set_result.update({
+                "player": detect_player_name(text),
+                "confirmed_time": get_utc_time(),
+                "strike_type": "LOCK"
+            })
+            strikes.append(set_result)
+
+        # --- Correct Score Analysis ---
         score_result = evaluate_correct_score_tennis(text)
         if score_result:
             score_result.update({
-                "market": "Correct Score",
                 "player": detect_player_name(text),
                 "confirmed_time": get_utc_time(),
                 "strike_type": "LOCK"
@@ -39,16 +51,17 @@ def generate_strikes(blog_lines, phrase_list):
 
 def base_confidence(phrases):
     """
-    Returns a baseline confidence score depending on phrase strength and quantity.
+    Score the base confidence from matched phrases.
     """
-    high_weight = {"dominant", "collapse", "no resistance", "storming"}
+    high_weight = {"dominant", "collapse", "storming", "rattled", "folding", "relentless"}
     count = len(phrases)
     boost = sum(1 for p in phrases if any(h in p for h in high_weight))
     return min(90, 70 + (count * 2) + (boost * 3))
 
 def detect_player_name(text):
     """
-    Very basic placeholder. Replace with proper NLP parsing or blog context.
+    Very basic player name detection from text.
+    Extend with NLP or known lineup parser for more precision.
     """
     if "swiatek" in text:
         return "Iga Swiatek"
@@ -58,8 +71,8 @@ def detect_player_name(text):
         return "Arsenal"
     if "man united" in text:
         return "Man United"
+    if "storm" in text:
+        return "Melbourne Storm"
+    if "roosters" in text:
+        return "Sydney Roosters"
     return "Unknown"
-
-def get_utc_time():
-    from datetime import datetime
-    return datetime.utcnow()
