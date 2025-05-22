@@ -25,7 +25,6 @@ def post_to_discord(message):
     except Exception as e:
         print("[DISCORD EXCEPTION]", e)
 
-    # Print for chat relay visibility
     print(f"[STRIKE ALERT] {message}")
 
 def log_strike_json(strike):
@@ -47,35 +46,51 @@ def run_engine():
     blog_entries = fetch_blog_entries(BLOG_FEED_URL)
     if not blog_entries:
         log_info(">>> No blog entries retrieved.")
-        return
+    else:
+        raw_strikes = generate_strikes(blog_entries, PHRASES)
+        confirmed = []
 
-    raw_strikes = generate_strikes(blog_entries, PHRASES)
-    confirmed = []
+        for strike in raw_strikes:
+            verified = verify_strikes_with_odds(strike)
+            if not verified:
+                continue
 
-    for strike in raw_strikes:
-        verified = verify_strikes_with_odds(strike)
-        if not verified:
-            continue
+            add_strike(verified)
+            post_to_discord(
+                f"**TOUARANGI STRIKE**\n"
+                f"{verified['player']} â€“ {verified['market']}\n"
+                f"Odds: {verified['odds']} | Confidence: {verified['confidence']}%"
+            )
+            log_strike_json(verified)
+            log_strike_summary(verified)
+            confirmed.append(verified)
 
-        add_strike(verified)
-        post_to_discord(
-            f"**TOUARANGI STRIKE**\n"
-            f"{verified['player']} â€“ {verified['market']}\n"
-            f"Odds: {verified['odds']} | Confidence: {verified['confidence']}%"
-        )
-        log_strike_json(verified)
-        log_strike_summary(verified)
-        confirmed.append(verified)
+        multi = detect_multi_opportunity(get_confirmed_strikes())
+        if multi:
+            post_to_discord(
+                f"**MULTI STRIKE**\n"
+                f"{' + '.join(multi['legs'])}\n"
+                f"Combined Confidence: {multi['combined_confidence']}%"
+            )
+            log_strike_json(multi)
+            log_strike_summary(multi)
 
-    multi = detect_multi_opportunity(get_confirmed_strikes())
-    if multi:
-        post_to_discord(
-            f"**MULTI STRIKE**\n"
-            f"{' + '.join(multi['legs'])}\n"
-            f"Combined Confidence: {multi['combined_confidence']}%"
-        )
-        log_strike_json(multi)
-        log_strike_summary(multi)
+    # Guaranteed test strike
+    test_strike = {
+        "player": "Test Player",
+        "market": "Anytime Goalscorer",
+        "odds": 2.60,
+        "confidence": 88
+    }
+    add_strike(test_strike)
+    post_to_discord(
+        f"**TOUARANGI STRIKE**\n"
+        f"{test_strike['player']} â€“ {test_strike['market']}\n"
+        f"Odds: {test_strike['odds']} | Confidence: {test_strike['confidence']}%"
+    )
+    log_strike_json(test_strike)
+    log_strike_summary(test_strike)
+    log_info(">>> TEST STRIKE SENT")
 
     log_info(">>> Cycle complete.\n")
 
