@@ -1,4 +1,3 @@
-
 import json
 import requests
 from datetime import datetime
@@ -10,7 +9,6 @@ from strike_queue import add_strike, get_confirmed_strikes
 from odds_verification import verify_strikes_with_odds
 from multi_builder import detect_multi_opportunity
 from logger import log_info, log_strike_summary
-from google_docs_writer import send_strike_to_doc
 
 # --- LIVE FEED SETUP ---
 BLOG_FEED_URL = "https://feeds.bbci.co.uk/sport/football/rss.xml?edition=uk"
@@ -67,7 +65,6 @@ def run_engine():
             f"{verified['player']} â€“ {verified['market']}\n"
             f"Odds: {verified['odds']} | Confidence: {verified['confidence']}%"
         )
-        send_strike_to_doc(verified)
         log_strike_json(verified)
         log_strike_summary(verified)
         confirmed.append(verified)
@@ -84,7 +81,7 @@ def run_engine():
 
     log_info(">>> Cycle complete.\n")
 
-# Optional: Force a fake test strike to validate Discord + logger + docs
+# Optional: Force a fake test strike to validate Discord + logger
 def inject_fake_strike():
     fake = {
         "player": "Test Player",
@@ -98,7 +95,6 @@ def inject_fake_strike():
         f"{fake['player']} â€“ {fake['market']}\n"
         f"Odds: {fake['odds']} | Confidence: {fake['confidence']}%"
     )
-    send_strike_to_doc(fake)
     log_strike_json(fake)
     log_strike_summary(fake)
     log_info(">>> FAKE STRIKE INJECTED")
