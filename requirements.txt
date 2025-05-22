@@ -1,8 +1,8 @@
-google-api-python-client
+feedparser
 google-auth
-google-auth-httplib2
 google-auth-oauthlib
-langdetect
+google-auth-httplib2
+google-api-python-client
 googletrans==4.0.0-rc1
-selenium
-undetected-chromedriver
+langdetect
+requests
