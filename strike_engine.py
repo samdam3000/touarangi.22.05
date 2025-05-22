@@ -2,19 +2,19 @@
 
 from correct_score import evaluate_correct_score_tennis
 from set_winner import evaluate_set_winner_from_blog
+from over_under import evaluate_over_under_from_blog
 from timing import get_utc_time
 
 def generate_strikes(blog_lines, phrase_list):
     """
-    Runs all strike detection logic on a list of blog lines.
-    Returns a list of valid strike objects with metadata.
+    Master strike builder: processes blog lines and outputs fire-ready strike objects.
     """
     strikes = []
 
     for line in blog_lines:
         text = line.lower()
 
-        # --- Phrase Match Core (General Momentum) ---
+        # --- Phrase Trigger (General Momentum) ---
         matched_phrases = [p for p in phrase_list if p in text]
         if matched_phrases:
             strike = {
@@ -27,7 +27,7 @@ def generate_strikes(blog_lines, phrase_list):
             }
             strikes.append(strike)
 
-        # --- Set Winner Analysis ---
+        # --- Set Winner (Tennis) ---
         set_result = evaluate_set_winner_from_blog(text)
         if set_result:
             set_result.update({
@@ -37,7 +37,7 @@ def generate_strikes(blog_lines, phrase_list):
             })
             strikes.append(set_result)
 
-        # --- Correct Score Analysis ---
+        # --- Correct Score (Tennis) ---
         score_result = evaluate_correct_score_tennis(text)
         if score_result:
             score_result.update({
@@ -47,11 +47,21 @@ def generate_strikes(blog_lines, phrase_list):
             })
             strikes.append(score_result)
 
+        # --- Over/Under (All Sports) ---
+        ou_result = evaluate_over_under_from_blog(text)
+        if ou_result:
+            ou_result.update({
+                "player": "Global Total",  # not player-specific
+                "confirmed_time": get_utc_time(),
+                "strike_type": "LOCK"
+            })
+            strikes.append(ou_result)
+
     return strikes
 
 def base_confidence(phrases):
     """
-    Score the base confidence from matched phrases.
+    Phrase-based confidence weighting.
     """
     high_weight = {"dominant", "collapse", "storming", "rattled", "folding", "relentless"}
     count = len(phrases)
@@ -60,8 +70,7 @@ def base_confidence(phrases):
 
 def detect_player_name(text):
     """
-    Very basic player name detection from text.
-    Extend with NLP or known lineup parser for more precision.
+    Basic name recognition — expand with team sheets or live player references.
     """
     if "swiatek" in text:
         return "Iga Swiatek"
