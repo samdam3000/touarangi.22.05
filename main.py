@@ -1,5 +1,3 @@
-
-
 import time import json import requests from datetime import datetime
 
 from phrase_library import PHRASES from blog_scanner import fetch_blog_entries from strike_engine import generate_strikes from strike_queue import add_strike, get_confirmed_strikes from odds_verification import verify_strikes_with_odds  # Connected to real scraper from multi_builder import detect_multi_opportunity from logger import log_info, log_strike_summary from google_docs_writer import send_strike_to_doc
