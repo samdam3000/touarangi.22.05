@@ -1,51 +1,38 @@
-# logger.py
+logger.py
 
-import logging
-from datetime import datetime
+import logging import requests
 
-# Configure global logger
-logging.basicConfig(
-    filename="touarangi.log",
-    filemode="a",
-    format="%(asctime)s | %(levelname)s | %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S",
-    level=logging.INFO
+Discord webhook
+
+DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/YOUR_WEBHOOK"
+
+Known sport-specific markets
+
+VALID_MARKETS = { 'football': ['Anytime Goalscorer', 'First Goalscorer', '2+ Goals', 'Next Goal', 'Team to Score'], 'tennis': ['Set Winner', 'Next Game Winner', 'Over/Under Games'], 'cricket': ['Top Runscorer', 'Next Wicket', 'Over Total Runs'], }
+
+Map entity keywords to sport
+
+SPORT_CONTEXT = { 'rashford': 'football', 'denmark': 'football', 'djokovic': 'tennis', 'walsh': 'football', 'crawley': 'football', 'geneva': 'tennis', 'kohli': 'cricket', 'england': 'cricket', 'warner': 'cricket', }
+
+Suggested default markets by sport
+
+DEFAULT_MARKET = { 'football': 'Anytime Goalscorer', 'tennis': 'Set Winner', 'cricket': 'Top Runscorer', }
+
+def determine_sport(entity: str) -> str: entity_key = entity.lower().split()[0] return SPORT_CONTEXT.get(entity_key, 'unknown')
+
+def validate_strike(entity: str, market: str) -> bool: sport = determine_sport(entity) if sport == 'unknown': return False return market in VALID_MARKETS.get(sport, [])
+
+def autocorrect_market(entity: str) -> str: sport = determine_sport(entity) return DEFAULT_MARKET.get(sport, 'Unknown Market')
+
+def format_strike_output(entity: str, market: str, odds: float, confidence: float) -> str: if not validate_strike(entity, market): corrected_market = autocorrect_market(entity) if corrected_market == 'Unknown Market': return f"INVALID STRIKE FILTERED: {entity} - {market} ({odds}, {confidence}%)" market = corrected_market  # replace with default valid market
+
+return (
+    f"**TOUARANGI STRIKE**\n"
+    f"{entity} – {market}\n"
+    f"Odds: {odds} | Confidence: {confidence}%"
 )
 
-def log_info(message):
-    """
-    Logs a general info-level message to console and file.
-    """
-    print(f"[INFO] {message}")
-    logging.info(message)
+def send_to_discord(message: str): payload = {"content": message} try: response = requests.post(DISCORD_WEBHOOK_URL, json=payload) response.raise_for_status() except requests.exceptions.RequestException as e: logging.error(f"Failed to send message to Discord: {e}")
 
-def log_warning(message):
-    """
-    Logs a warning-level message.
-    """
-    print(f"[WARN] {message}")
-    logging.warning(message)
+def log_strike(entity: str, market: str, odds: float, confidence: float): message = format_strike_output(entity, market, odds, confidence) if not message.startswith("INVALID"): send_to_discord(message) else: logging.info(message)
 
-def log_error(message):
-    """
-    Logs an error-level message.
-    """
-    print(f"[ERROR] {message}")
-    logging.error(message)
-
-def log_strike_summary(strike):
-    """
-    Logs a formatted strike dictionary to the log file.
-    """
-    msg = (
-        f"STRIKE | {strike.get('market')} | {strike.get('player')} | "
-        f"Conf: {strike.get('confidence')}% | Odds: {strike.get('odds')} | "
-        f"Reason: {strike.get('reason')}"
-    )
-    log_info(msg)
-
-def log_system_start():
-    log_info("Touarangi Engine started at " + datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S UTC"))
-
-def log_cycle_complete():
-    log_info("Cycle complete at " + datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S UTC"))
