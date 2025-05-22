@@ -25,6 +25,9 @@ def post_to_discord(message):
     except Exception as e:
         print("[DISCORD EXCEPTION]", e)
 
+    # Print for chat relay visibility
+    print(f"[STRIKE ALERT] {message}")
+
 def log_strike_json(strike):
     try:
         with open(STRIKE_LOG_FILE, "r") as f:
