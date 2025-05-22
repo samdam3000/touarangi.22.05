@@ -17,6 +17,8 @@ BLOG_FEED_URL = "https://feeds.bbci.co.uk/sport/football/rss.xml?edition=uk"
 DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1367694718229811332/7_HAmXZYAkmfuWFrMQyvoBbcYX8GjhKeQofnwFcngXvtqKUFb14qhWtxjCOK42uiNpjw"
 STRIKE_LOG_FILE = "strikes_log.json"
 
+print(">>> TOUARANGI STARTED at", datetime.utcnow().isoformat())
+
 def post_to_discord(message):
     try:
         requests.post(DISCORD_WEBHOOK_URL, json={"content": message})
@@ -37,11 +39,11 @@ def log_strike_json(strike):
         json.dump(data, f, indent=2)
 
 def run_engine():
-    log_info("TOUARANGI REAL-TIME CYCLE")
+    log_info(">>> run_engine() triggered at " + datetime.utcnow().isoformat())
 
     blog_entries = fetch_blog_entries(BLOG_FEED_URL)
     if not blog_entries:
-        log_info("No blog entries retrieved.")
+        log_info(">>> No blog entries retrieved.")
         return
 
     raw_strikes = generate_strikes(blog_entries, PHRASES)
@@ -56,7 +58,7 @@ def run_engine():
         add_strike(verified)
         post_to_discord(
             f"**TOUARANGI STRIKE**\n"
-            f"{verified['player']} – {verified['market']}\n"
+            f"{verified['player']} â€“ {verified['market']}\n"
             f"Odds: {verified['odds']} | Confidence: {verified['confidence']}%"
         )
         send_strike_to_doc(verified)
@@ -74,7 +76,7 @@ def run_engine():
         log_strike_json(multi)
         log_strike_summary(multi)
 
-    log_info("Cycle complete.\n")
+    log_info(">>> Cycle complete.\n")
 
 if __name__ == "__main__":
     while True:
