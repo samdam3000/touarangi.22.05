@@ -12,15 +12,14 @@ from odds_verification import verify_strikes_with_odds
 from multi_builder import detect_multi_opportunity
 from logger import log_info, log_strike_summary
 
-# Use test lines instead of feed
+# Simulated blog lines for testing
 blog_entries = [
     "Swiatek storming through the set, no resistance left",
     "Alcaraz relentless with dominant first serve",
     "This has become a goal fest — wide open at both ends",
-    "Tight battle, holding serve easily but no real chances",
+    "Tight battle, holding serve easily but no real chances"
 ]
 
-# Your webhook
 DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1367694718229811332/7_HAmXZYAkmfuWFrMQyvoBbcYX8GjhKeQofnwFcngXvtqKUFb14qhWtxjCOK42uiNpjw"
 STRIKE_LOG_FILE = "strikes_log.json"
 
@@ -46,22 +45,31 @@ def log_strike_json(strike):
 def run_engine():
     log_info("TOUARANGI TEST CYCLE")
 
+    # 1. Generate strikes from fake blog lines
     raw_strikes = generate_strikes(blog_entries, PHRASES)
     confirmed = []
 
+    # 2. Validate and push
     for strike in raw_strikes:
         verified = verify_strikes_with_odds(strike)
+
+        # Force odds if missing (debug mode)
+        if not verified and strike.get("confidence", 0) >= 70:
+            strike["odds"] = 1.50
+            verified = strike
+
         if verified:
             add_strike(verified)
             post_to_discord(
                 f"**TOUARANGI STRIKE**\n"
                 f"{verified['player']} – {verified['market']}\n"
-                f"Odds: {verified.get('odds', '?')} | Confidence: {verified['confidence']}%"
+                f"Odds: {verified['odds']} | Confidence: {verified['confidence']}%"
             )
             log_strike_json(verified)
             log_strike_summary(verified)
             confirmed.append(verified)
 
+    # 3. Detect combo opportunities
     multi = detect_multi_opportunity(get_confirmed_strikes())
     if multi:
         post_to_discord(
