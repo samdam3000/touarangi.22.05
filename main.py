@@ -38,7 +38,7 @@ def log_strike_json(strike):
     data.append(strike)
 
     with open(STRIKE_LOG_FILE, "w") as f:
-        json.dump(data, f, indent=2)
+        json.dump(data, f, indent=2, default=str)  # FIXED datetime serialisation
 
 def run_engine():
     log_info(">>> run_engine() triggered at " + datetime.utcnow().isoformat())
@@ -58,7 +58,7 @@ def run_engine():
             add_strike(verified)
             post_to_discord(
                 f"**TOUARANGI STRIKE**\n"
-                f"{verified['player']} â€“ {verified['market']}\n"
+                f"{verified['player']} - {verified['market']}\n"
                 f"Odds: {verified['odds']} | Confidence: {verified['confidence']}%"
             )
             log_strike_json(verified)
@@ -75,7 +75,7 @@ def run_engine():
             log_strike_json(multi)
             log_strike_summary(multi)
 
-    # Guaranteed test strike
+    # Final guaranteed test strike
     test_strike = {
         "player": "Test Player",
         "market": "Anytime Goalscorer",
@@ -85,7 +85,7 @@ def run_engine():
     add_strike(test_strike)
     post_to_discord(
         f"**TOUARANGI STRIKE**\n"
-        f"{test_strike['player']} â€“ {test_strike['market']}\n"
+        f"{test_strike['player']} - {test_strike['market']}\n"
         f"Odds: {test_strike['odds']} | Confidence: {test_strike['confidence']}%"
     )
     log_strike_json(test_strike)
