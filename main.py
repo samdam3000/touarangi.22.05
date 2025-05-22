@@ -15,6 +15,8 @@ BLOG_FEED_URL = "https://feeds.bbci.co.uk/sport/football/rss.xml?edition=uk"
 DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1367694718229811332/7_HAmXZYAkmfuWFrMQyvoBbcYX8GjhKeQofnwFcngXvtqKUFb14qhWtxjCOK42uiNpjw"
 STRIKE_LOG_FILE = "strikes_log.json"
 
+last_multi_fired = None  # cooldown tracker
+
 print(">>> TOUARANGI STARTED at", datetime.utcnow().isoformat())
 
 def post_to_discord(message):
@@ -38,35 +40,41 @@ def log_strike_json(strike):
     data.append(strike)
 
     with open(STRIKE_LOG_FILE, "w") as f:
-        json.dump(data, f, indent=2, default=str)  # FIXED datetime serialisation
+        json.dump(data, f, indent=2, default=str)
 
 def run_engine():
-    log_info(">>> run_engine() triggered at " + datetime.utcnow().isoformat())
+    global last_multi_fired
 
+    print(">>> Engine running:", datetime.utcnow().isoformat())
     blog_entries = fetch_blog_entries(BLOG_FEED_URL)
-    if not blog_entries:
-        log_info(">>> No blog entries retrieved.")
-    else:
-        raw_strikes = generate_strikes(blog_entries, PHRASES)
-        confirmed = []
+    print(f">>> Blog entries found: {len(blog_entries)}")
 
-        for strike in raw_strikes:
-            verified = verify_strikes_with_odds(strike)
-            if not verified:
-                continue
+    raw_strikes = generate_strikes(blog_entries, PHRASES)
+    print(f">>> Raw strikes generated: {len(raw_strikes)}")
 
-            add_strike(verified)
-            post_to_discord(
-                f"**TOUARANGI STRIKE**\n"
-                f"{verified['player']} - {verified['market']}\n"
-                f"Odds: {verified['odds']} | Confidence: {verified['confidence']}%"
-            )
-            log_strike_json(verified)
-            log_strike_summary(verified)
-            confirmed.append(verified)
+    confirmed = []
 
-        multi = detect_multi_opportunity(get_confirmed_strikes())
-        if multi:
+    for strike in raw_strikes:
+        verified = verify_strikes_with_odds(strike)
+        if not verified:
+            continue
+
+        add_strike(verified)
+        post_to_discord(
+            f"**TOUARANGI STRIKE**\n"
+            f"{verified['player']} - {verified['market']}\n"
+            f"Odds: {verified['odds']} | Confidence: {verified['confidence']}%"
+        )
+        log_strike_json(verified)
+        log_strike_summary(verified)
+        confirmed.append(verified)
+
+    print(f">>> Confirmed strikes sent: {len(confirmed)}")
+
+    multi = detect_multi_opportunity(get_confirmed_strikes())
+    if multi:
+        now = datetime.utcnow()
+        if not last_multi_fired or (now - last_multi_fired).seconds > 180:
             post_to_discord(
                 f"**MULTI STRIKE**\n"
                 f"{' + '.join(multi['legs'])}\n"
@@ -74,27 +82,11 @@ def run_engine():
             )
             log_strike_json(multi)
             log_strike_summary(multi)
+            last_multi_fired = now
 
-    # Final guaranteed test strike
-    test_strike = {
-        "player": "Test Player",
-        "market": "Anytime Goalscorer",
-        "odds": 2.60,
-        "confidence": 88
-    }
-    add_strike(test_strike)
-    post_to_discord(
-        f"**TOUARANGI STRIKE**\n"
-        f"{test_strike['player']} - {test_strike['market']}\n"
-        f"Odds: {test_strike['odds']} | Confidence: {test_strike['confidence']}%"
-    )
-    log_strike_json(test_strike)
-    log_strike_summary(test_strike)
-    log_info(">>> TEST STRIKE SENT")
+    print(">>> Engine finished.\n")
 
-    log_info(">>> Cycle complete.\n")
-
-# RUN once, live-ready
+# RUN once
 try:
     run_engine()
 except Exception as e:
