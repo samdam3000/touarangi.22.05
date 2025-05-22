@@ -1,5 +1,3 @@
-# timing.py
-
 from datetime import datetime, timedelta
 
 def get_utc_time():
