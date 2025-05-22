@@ -1,1 +1,40 @@
-[]
+[
+  {
+    "market": "Momentum Trigger",
+    "player": "Iga Swiatek",
+    "confidence": 84,
+    "odds": 1.26,
+    "reason": "Matched phrases: dominant start, rattled",
+    "strike_type": "LOCK",
+    "confirmed_time": "2025-05-22T12:10:40Z"
+  },
+  {
+    "market": "Set Winner",
+    "player": "Carlos Alcaraz",
+    "confidence": 79,
+    "odds": 1.44,
+    "reason": "Break advantage or control language detected",
+    "strike_type": "LOCK",
+    "confirmed_time": "2025-05-22T12:12:05Z"
+  },
+  {
+    "market": "Correct Score",
+    "player": "Iga Swiatek",
+    "confidence": 83,
+    "odds": 1.30,
+    "reason": "Collapse tone detected (folding/resistance gone)",
+    "strike_type": "LOCK",
+    "confirmed_time": "2025-05-22T12:14:30Z"
+  },
+  {
+    "market": "Multi-Strike Combo",
+    "player": "N/A",
+    "legs": [
+      "Carlos Alcaraz (Set Winner)",
+      "Iga Swiatek (Correct Score)"
+    ],
+    "combined_confidence": 81.0,
+    "strike_type": "MULTI LOCK",
+    "confirmed_time": "2025-05-22T12:15:00Z"
+  }
+]
