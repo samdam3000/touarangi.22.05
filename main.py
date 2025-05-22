@@ -1,3 +1,4 @@
+
 import json
 import requests
 from datetime import datetime
@@ -10,12 +11,9 @@ from odds_verification import verify_strikes_with_odds
 from multi_builder import detect_multi_opportunity
 from logger import log_info, log_strike_summary
 
-# --- LIVE FEED SETUP ---
-BLOG_FEED_URL = "https://feeds.bbci.co.uk/sport/football/rss.xml?edition=uk"
 DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1367694718229811332/7_HAmXZYAkmfuWFrMQyvoBbcYX8GjhKeQofnwFcngXvtqKUFb14qhWtxjCOK42uiNpjw"
 STRIKE_LOG_FILE = "strikes_log.json"
-
-last_multi_fired = None  # cooldown tracker
+last_multi_fired = None
 
 print(">>> TOUARANGI STARTED at", datetime.utcnow().isoformat())
 
@@ -26,7 +24,6 @@ def post_to_discord(message):
             print("[DISCORD ERROR]", response.status_code, response.text)
     except Exception as e:
         print("[DISCORD EXCEPTION]", e)
-
     print(f"[STRIKE ALERT] {message}")
 
 def log_strike_json(strike):
@@ -35,18 +32,16 @@ def log_strike_json(strike):
             data = json.load(f)
     except:
         data = []
-
     strike["log_time"] = datetime.utcnow().isoformat() + "Z"
     data.append(strike)
-
     with open(STRIKE_LOG_FILE, "w") as f:
         json.dump(data, f, indent=2, default=str)
 
 def run_engine():
     global last_multi_fired
-
     print(">>> Engine running:", datetime.utcnow().isoformat())
-    blog_entries = fetch_blog_entries(BLOG_FEED_URL)
+
+    blog_entries = fetch_blog_entries()  # fixed: no argument
     print(f">>> Blog entries found: {len(blog_entries)}")
 
     raw_strikes = generate_strikes(blog_entries, PHRASES)
@@ -74,7 +69,7 @@ def run_engine():
     multi = detect_multi_opportunity(get_confirmed_strikes())
     if multi:
         now = datetime.utcnow()
-        if not last_multi_fired or (now - last_multi_fired).seconds > 180:
+        if not last_multi_fired or (now - last_multi_fired).seconds > 120:
             post_to_discord(
                 f"**MULTI STRIKE**\n"
                 f"{' + '.join(multi['legs'])}\n"
@@ -86,7 +81,6 @@ def run_engine():
 
     print(">>> Engine finished.\n")
 
-# RUN once
 try:
     run_engine()
 except Exception as e:
