@@ -1,3 +1,4 @@
+
 PHRASES = [
     # Scoring actions
     "scores", "scored", "goal", "goals", "touchdown", "try", "hat-trick",

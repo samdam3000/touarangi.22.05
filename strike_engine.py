@@ -1,4 +1,3 @@
-from datetime import datetime
 
 def generate_strikes(entries, phrases):
     strikes = []
@@ -13,10 +12,10 @@ def generate_strikes(entries, phrases):
         for phrase in phrases:
             if phrase.lower() in text:
                 strikes.append({
-                    "player": phrase.title(),  # Placeholder for player reference
-                    "market": "Anytime Goalscorer",  # Example default market
+                    "player": phrase.title(),
+                    "market": "Anytime Goalscorer",
                     "odds": 2.75,
-                    "confidence": 70 + len(phrase) % 10  # Simple scoring
+                    "confidence": 70 + len(phrase) % 10
                 })
                 break
 
