@@ -1,3 +1,4 @@
+
 import json
 import requests
 from datetime import datetime
@@ -11,6 +12,7 @@ from multi_builder import detect_multi_opportunity
 from logger import log_info, log_strike_summary
 from google_docs_writer import send_strike_to_doc
 
+# --- LIVE FEED SETUP ---
 BLOG_FEED_URL = "https://feeds.bbci.co.uk/sport/football/rss.xml?edition=uk"
 DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1367694718229811332/7_HAmXZYAkmfuWFrMQyvoBbcYX8GjhKeQofnwFcngXvtqKUFb14qhWtxjCOK42uiNpjw"
 STRIKE_LOG_FILE = "strikes_log.json"
@@ -19,9 +21,14 @@ print(">>> TOUARANGI STARTED at", datetime.utcnow().isoformat())
 
 def post_to_discord(message):
     try:
-        requests.post(DISCORD_WEBHOOK_URL, json={"content": message})
+        response = requests.post(DISCORD_WEBHOOK_URL, json={"content": message})
+        if response.status_code != 204:
+            print("[DISCORD ERROR] Status:", response.status_code, "| Message:", response.text)
     except Exception as e:
-        print("[DISCORD ERROR]", e)
+        print("[DISCORD EXCEPTION]", e)
+
+# Test webhook connectivity
+post_to_discord(">>> TESTING DISCORD WEBHOOK â€” Touarangi is alive.")
 
 def log_strike_json(strike):
     try:
@@ -52,10 +59,12 @@ def run_engine():
         if not verified:
             continue
 
+        print(">>> STRIKE VERIFIED:", verified)
+
         add_strike(verified)
         post_to_discord(
-            f"**TOUARANGI STRIKE**\\n"
-            f"{verified['player']} – {verified['market']}\\n"
+            f"**TOUARANGI STRIKE**\n"
+            f"{verified['player']} â€“ {verified['market']}\n"
             f"Odds: {verified['odds']} | Confidence: {verified['confidence']}%"
         )
         send_strike_to_doc(verified)
@@ -66,17 +75,37 @@ def run_engine():
     multi = detect_multi_opportunity(get_confirmed_strikes())
     if multi:
         post_to_discord(
-            f"**MULTI STRIKE**\\n"
-            f"{' + '.join(multi['legs'])}\\n"
+            f"**MULTI STRIKE**\n"
+            f"{' + '.join(multi['legs'])}\n"
             f"Combined Confidence: {multi['combined_confidence']}%"
         )
         log_strike_json(multi)
         log_strike_summary(multi)
 
-    log_info(">>> Cycle complete.\\n")
+    log_info(">>> Cycle complete.\n")
 
-# Call once only — no cron
+# Optional: Force a fake test strike to validate Discord + logger + docs
+def inject_fake_strike():
+    fake = {
+        "player": "Test Player",
+        "market": "Anytime Goalscorer",
+        "odds": 3.20,
+        "confidence": 88
+    }
+    add_strike(fake)
+    post_to_discord(
+        f"**TOUARANGI STRIKE**\n"
+        f"{fake['player']} â€“ {fake['market']}\n"
+        f"Odds: {fake['odds']} | Confidence: {fake['confidence']}%"
+    )
+    send_strike_to_doc(fake)
+    log_strike_json(fake)
+    log_strike_summary(fake)
+    log_info(">>> FAKE STRIKE INJECTED")
+
+# RUN
 try:
     run_engine()
+    inject_fake_strike()  # remove this after confirming it works
 except Exception as e:
     print("[FATAL ERROR]", e)
