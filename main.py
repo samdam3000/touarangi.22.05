@@ -1,87 +1,35 @@
+# main.py
 
-import json
-import requests
-from datetime import datetime
+from blog_scanner import scan_blogs
+from phrase_library import load_vocabulary
+from strike_engine import evaluate_strikes
+from odds_verification import attach_odds_and_tier
+from logger import log_strike_to_discord, log_summary
+from strike_queue import is_duplicate_strike, store_strike
+import time
 
-from phrase_library import PHRASES
-from blog_scanner import fetch_blog_entries
-from strike_engine import generate_strikes
-from strike_queue import add_strike, get_confirmed_strikes
-from odds_verification import verify_strikes_with_odds
-from multi_builder import detect_multi_opportunity
-from logger import log_info, log_strike_summary
+REFRESH_INTERVAL = 60  # Seconds between scans
 
-DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1367694718229811332/7_HAmXZYAkmfuWFrMQyvoBbcYX8GjhKeQofnwFcngXvtqKUFb14qhWtxjCOK42uiNpjw"
-STRIKE_LOG_FILE = "strikes_log.json"
-last_multi_fired = None
+def main():
+    print("TOUARANGI SYSTEM STARTED")
+    vocabulary = load_vocabulary()
 
-print(">>> TOUARANGI STARTED at", datetime.utcnow().isoformat())
+    while True:
+        print("Scanning blogs...")
+        blog_data = scan_blogs()
 
-def post_to_discord(message):
-    try:
-        response = requests.post(DISCORD_WEBHOOK_URL, json={"content": message})
-        if response.status_code != 204:
-            print("[DISCORD ERROR]", response.status_code, response.text)
-    except Exception as e:
-        print("[DISCORD EXCEPTION]", e)
-    print(f"[STRIKE ALERT] {message}")
+        print("Evaluating strike candidates...")
+        strike_candidates = evaluate_strikes(blog_data, vocabulary)
 
-def log_strike_json(strike):
-    try:
-        with open(STRIKE_LOG_FILE, "r") as f:
-            data = json.load(f)
-    except:
-        data = []
-    strike["log_time"] = datetime.utcnow().isoformat() + "Z"
-    data.append(strike)
-    with open(STRIKE_LOG_FILE, "w") as f:
-        json.dump(data, f, indent=2, default=str)
+        for strike in strike_candidates:
+            if not is_duplicate_strike(strike):
+                strike = attach_odds_and_tier(strike)
+                store_strike(strike)
+                log_strike_to_discord(strike)
+                log_summary(strike)
 
-def run_engine():
-    global last_multi_fired
-    print(">>> Engine running:", datetime.utcnow().isoformat())
+        print("Sleeping before next scan...")
+        time.sleep(REFRESH_INTERVAL)
 
-    blog_entries = fetch_blog_entries()  # fixed: no argument
-    print(f">>> Blog entries found: {len(blog_entries)}")
-
-    raw_strikes = generate_strikes(blog_entries, PHRASES)
-    print(f">>> Raw strikes generated: {len(raw_strikes)}")
-
-    confirmed = []
-
-    for strike in raw_strikes:
-        verified = verify_strikes_with_odds(strike)
-        if not verified:
-            continue
-
-        add_strike(verified)
-        post_to_discord(
-            f"**TOUARANGI STRIKE**\n"
-            f"{verified['player']} - {verified['market']}\n"
-            f"Odds: {verified['odds']} | Confidence: {verified['confidence']}%"
-        )
-        log_strike_json(verified)
-        log_strike_summary(verified)
-        confirmed.append(verified)
-
-    print(f">>> Confirmed strikes sent: {len(confirmed)}")
-
-    multi = detect_multi_opportunity(get_confirmed_strikes())
-    if multi:
-        now = datetime.utcnow()
-        if not last_multi_fired or (now - last_multi_fired).seconds > 120:
-            post_to_discord(
-                f"**MULTI STRIKE**\n"
-                f"{' + '.join(multi['legs'])}\n"
-                f"Combined Confidence: {multi['combined_confidence']}%"
-            )
-            log_strike_json(multi)
-            log_strike_summary(multi)
-            last_multi_fired = now
-
-    print(">>> Engine finished.\n")
-
-try:
-    run_engine()
-except Exception as e:
-    print("[FATAL ERROR]", e)
+if __name__ == "__main__":
+    main()
